@@ -152,7 +152,7 @@ setInterval(function(){
                         global.bitstampSellData.sellAmount = amount
                         let value = amount * global.bitstampSellData.sellPrice
                         console.log('value', value)
-                        if(value < 10){
+                        if(value < 20){
                             console.log('dont own asset')
                             return 'Dont own that asset'
                         } else {
