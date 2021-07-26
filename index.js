@@ -140,7 +140,7 @@ setInterval(function(){
                 global.bitstampSellData.sellPrice = parseFloat(body.bid)
                 let amountToNumbers = global.buyingPower / body.ask
                 global.bitstampBuyData.buyAmount = +$$(
-                    $(amountToNumbers), subtractPercent(12)).toNumber().toFixed(6)
+                    $(amountToNumbers), subtractPercent(5)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
                     console.log(a, body)
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close
@@ -166,6 +166,7 @@ setInterval(function(){
                     })
                 }
                 let minOrder = global.buyingPower * global.bitstampBuyData.buyPrice
+                    console.log('Min order', minOrder)
                 if (global.bitstampBuyData.buy === true && global.buyingPower > 20 && minOrder > 20){
                         buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(data =>{
                             console.log('bought stuff')
