@@ -187,4 +187,4 @@ const bitstampStream = new BitstampStream();
 /*await bitstamp.buyLimitOrder(amount, price, currency, limit_price, daily_order);
 
 await bitstamp.sellLimitOrder(amount, price, currency, limit_price, daily_order);*/
-app.listen(3005);
+app.listen(process.env.PORT);
