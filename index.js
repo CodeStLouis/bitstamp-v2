@@ -140,7 +140,7 @@ setInterval(function(){
                 global.bitstampSellData.sellPrice = parseFloat(body.bid)
                 let amountToNumbers = global.buyingPower / body.ask
                 global.bitstampBuyData.buyAmount = +$$(
-                    $(amountToNumbers), subtractPercent(15)).toNumber().toFixed(6)
+                    $(amountToNumbers), subtractPercent(12)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
                     console.log(a, body)
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close
@@ -153,8 +153,10 @@ setInterval(function(){
                         let value = amount * global.bitstampSellData.sellPrice
                         console.log('value', value)
                         if(value < 10){
+                            console.log('dont own asset')
                             return 'Dont own that asset'
                         } else {
+                            console.log('selling', amount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade)
                             sellPromiseBitstamp(amount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade).then(data=>{
                                 console.log('placed sell')
                             }).catch(err =>{
@@ -163,7 +165,8 @@ setInterval(function(){
                         }
                     })
                 }
-                if (global.bitstampBuyData.buy === true && global.buyingPower > 20){
+                let minOrder = global.buyingPower * global.bitstampBuyData.buyPrice
+                if (global.bitstampBuyData.buy === true && global.buyingPower > 20 && minOrder > 20){
                         buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(data =>{
                             console.log('bought stuff')
                         }).catch(err =>{
