@@ -148,12 +148,13 @@ setInterval(function(){
                 console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy)
                 console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)
                 if (global.bitstampSellData.sell === true){
+                    console.log('inside sell')
                     getAssetBalance(a).then(amount =>{
                         global.bitstampSellData.sellAmount = amount
                         let value = amount * global.bitstampSellData.sellPrice
                         console.log('value', value)
                         if(value < 20){
-                            console.log('dont own asset')
+                            console.log(a,'dont own asset')
                             return 'Dont own that asset'
                         } else {
                             console.log('selling', amount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade)
@@ -165,9 +166,9 @@ setInterval(function(){
                         }
                     })
                 }
-                let minOrder = global.buyingPower * global.bitstampBuyData.buyPrice
+                let minOrder = global.buyingPower / global.bitstampBuyData.buyPrice
                     console.log('Min order', minOrder)
-                if (global.bitstampBuyData.buy === true && global.buyingPower > 20 && minOrder > 20){
+                if (global.bitstampBuyData.buy === true && global.buyingPower > 20){
                         buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(data =>{
                             console.log('bought stuff')
                         }).catch(err =>{
