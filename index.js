@@ -89,6 +89,7 @@ async function isSma5AboveNine(asset){
                 $(sma5), subtractPercent(5))
             let smaFiveIsAboveNine = smaFive > smaNine // buy a certain percentage
             console.log(asset, 'Sma five is greater than 9? 5m', smaFiveIsAboveNine,'sma9=', smaNine, 'sma5=', smaFive)
+            global.bitstampData.fiveAboveTheNine = smaFiveIsAboveNine
             return smaFiveIsAboveNine
         })
 
@@ -154,7 +155,7 @@ setInterval(function(){
     })
     for(let a of crypto){
         isSma5AboveNine(a).then(fiveAboveNine =>{
-            console.log(a,'returned from five is above nine ', fiveAboveNine)
+            console.log(a,'returned from five is above nine ', global.bitstampData.fiveAboveTheNine)
             global.bitstampData.fiveAboveTheNine = fiveAboveNine
         })
         sma9Promise(a, '1m').then(sma9 =>{
@@ -172,9 +173,9 @@ setInterval(function(){
                     $(amountToNumbers), subtractPercent(5)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
                     console.log(a, body)
-                global.bitstampBuyData.buy = sma9 < global.bitstampData.close
+                global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
                 global.bitstampSellData.sell = sma9 > global.bitstampData.close
-                console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy)
+                console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine)
                 console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)
                 if (global.bitstampSellData.sell === true){
                     console.log('inside sell')
@@ -205,7 +206,7 @@ setInterval(function(){
                             console.log(err, 'buying error line 161')
                         })
                 }
-                    console.log('buying data', global.bitstampBuyData, 'selling data', global.bitstampSellData, 'buying power', global.buyingPower)
+                    console.log('bitstamp data', global.bitstampData, 'buying data', global.bitstampBuyData, 'selling data', global.bitstampSellData, 'buying power', global.buyingPower)
             }
 
             ));
