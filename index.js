@@ -37,7 +37,8 @@ global.bitstampData ={
     symbol:{},
     amount:{},
     close:{},
-    smaNine:{}
+    smaNine:{},
+    fiveAboveTheNine:{}
 }
 global.buyingPower={}
 const crypto = [
@@ -52,7 +53,7 @@ async function getSMANine(s, i){
    // console.log(s, 'in sma9')
     let usableSymbol = s + '/USDT'
     console.log(usableSymbol, 'in sma9')
-    let smaData = await limiter.schedule(() =>sma(10, "close", "binance", usableSymbol, "1m", false))
+    let smaData = await limiter.schedule(() =>sma(20, "close", "binance", usableSymbol, "1m", false))
     let lastSMANinecandle = smaData[smaData.length - 1]
    // console.log(s, lastSMANinecandle)
     return lastSMANinecandle
@@ -69,6 +70,30 @@ function sma9Promise(asset, i){
             }
         })
     })
+}
+async function getSMAFive(s, i){
+    // 5 Dya moving average
+    // console.log(s, 'in sma')
+    let usableSymbol = s + '/USDT'
+    let smaData = await limiter.schedule(() => sma(9, "close", "binance", usableSymbol, i, false))
+    let lastSMAFiveCandle = smaData[smaData.length - 1]
+    //console.log(s, lastSMAFiveCandle)
+    return lastSMAFiveCandle
+
+}
+async function isSma5AboveNine(asset){
+   await getSMANine(asset, '5m').then(sma9 =>{
+        const smaNine = sma9
+        getSMAFive(asset, '5m').then(sma5 =>{
+            let smaFive = +$$(
+                $(sma5), subtractPercent(5))
+            let smaFiveIsAboveNine = smaFive > smaNine // buy a certain percentage
+            console.log(asset, 'Sma five is greater than 9? 5m', smaFiveIsAboveNine,'sma9=', smaNine, 'sma5=', smaFive)
+            return smaFiveIsAboveNine
+        })
+
+    })
+
 }
 async function getAssetBalance(asset){
     global.bitstampData.symbol = asset
@@ -128,6 +153,10 @@ setInterval(function(){
         console.log('buying power', data)
     })
     for(let a of crypto){
+        isSma5AboveNine(a).then(fiveAboveNine =>{
+            console.log(a,'returned from five is above nine ', fiveAboveNine)
+            global.bitstampData.fiveAboveTheNine = fiveAboveNine
+        })
         sma9Promise(a, '1m').then(sma9 =>{
             console.log(a, 'return from sma nine', sma9)
             const tickerSymbol = a + '_USD'
@@ -168,7 +197,8 @@ setInterval(function(){
                 }
                 let minOrder = global.buyingPower / global.bitstampBuyData.buyPrice
                     console.log('Min order', minOrder)
-                if (global.bitstampBuyData.buy === true && global.buyingPower > 20){
+                if (global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true){
+                    console.log('buying conditions', global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true)
                         buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(data =>{
                             console.log('bought stuff')
                         }).catch(err =>{
