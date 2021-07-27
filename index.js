@@ -52,7 +52,7 @@ async function getSMANine(s, i){
    // console.log(s, 'in sma9')
     let usableSymbol = s + '/USDT'
     console.log(usableSymbol, 'in sma9')
-    let smaData = await limiter.schedule(() =>sma(10, "close", "binance", usableSymbol, "1m", false))
+    let smaData = await limiter.schedule(() =>sma(25, "close", "binance", usableSymbol, "1m", false))
     let lastSMANinecandle = smaData[smaData.length - 1]
    // console.log(s, lastSMANinecandle)
     return lastSMANinecandle
