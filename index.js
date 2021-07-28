@@ -80,14 +80,25 @@ async function getSMAFive(s, i){
     return lastSMAFiveCandle
 
 }
+function sma5Promise(asset, i){
+    return new Promise((resolve, reject)=>{
+        getSMAFive(asset, i).then(data =>{
+            if(data){
+                resolve(data)
+            }else{
+                reject('you suck')
+            }
+        })
+    })
+}
 async function isSma5AboveNine(asset){
-   await getSMANine(asset, '5m').then(sma9 =>{
+   await getSMANine(asset, '1m').then(sma9 =>{
         const smaNine = sma9
-        getSMAFive(asset, '5m').then(sma5 =>{
-            let smaFive = +$$(
-                $(sma5), subtractPercent(5))
-            let smaFiveIsAboveNine = smaFive > smaNine // buy a certain percentage
-            console.log(asset, 'Sma five is greater than 9? 5m', smaFiveIsAboveNine,'sma9=', smaNine, 'sma5=', smaFive)
+        getSMAFive(asset, '1m').then(sma5 =>{
+           /* let smaFive = +$$(
+                $(sma5), subtractPercent(1))*/
+            let smaFiveIsAboveNine = sma5 > smaNine // buy a certain percentage
+            console.log(asset, 'Sma five is greater than 9? 5m', smaFiveIsAboveNine,'sma9=', smaNine, 'sma5=', sma5)
             global.bitstampData.fiveAboveTheNine = smaFiveIsAboveNine
             return smaFiveIsAboveNine
         })
@@ -209,6 +220,11 @@ setInterval(function(){
             }
 
             ));
+        })
+        sma5Promise(global.bitstampData.symbol, '1m').then(sma5 =>{
+            console.log(sma5 ,'sma 5 and close' ,global.bitstampData.close)
+            global.bitstampSellData.sell = global.bitstampData.close < sma5
+            console.log('sma 5 and close sell signal =' , global.bitstampSellData.sell)
         })
     }
 
