@@ -42,7 +42,6 @@ global.bitstampData ={
 global.buyingPower={}
 const crypto = [
     'ETH',
-    'LTC'
 
 ]
 let t = new Date
@@ -261,9 +260,4 @@ setInterval(function(){
 
 }, 20000)
 
-const bitstampStream = new BitstampStream();
-
-/*await bitstamp.buyLimitOrder(amount, price, currency, limit_price, daily_order);
-
-await bitstamp.sellLimitOrder(amount, price, currency, limit_price, daily_order);*/
 app.listen(process.env.PORT);
