@@ -42,7 +42,7 @@ global.bitstampData ={
 global.buyingPower={}
 const crypto = [
     'ETH',
-    'LTC'
+
 ]
 let t = new Date
 const rawUtcTimeNow = (Math.floor(t.getTime()))
@@ -99,7 +99,7 @@ async function isSma5AboveNine(asset){
                 $(sma5), subtractPercent(1))*/
             let smaFiveIsAboveNine = sma5 > smaNine // buy a certain percentage
             console.log(asset, 'Sma five is greater than 9? 5m', smaFiveIsAboveNine,'sma9=', smaNine, 'sma5=', sma5)
-            global.bitstampData.fiveAboveTheNine = smaFiveIsAboveNine
+           // global.bitstampData.fiveAboveTheNine = smaFiveIsAboveNine
             return smaFiveIsAboveNine
         })
 
@@ -166,9 +166,7 @@ setInterval(function(){
     })
     for(let a of crypto){
         isSma5AboveNine(a).then(fiveAboveNine =>{
-            console.log(a,'returned from five is above nine ', global.bitstampData.fiveAboveTheNine)
-            global.bitstampData.fiveAboveTheNine = fiveAboveNine
-        })
+            console.log(a,'returned from five is above nine ', fiveAboveNine)
         sma9Promise(a, '1m').then(sma9 =>{
             console.log(a, 'return from sma nine', sma9)
             const tickerSymbol = a + '_USD'
@@ -177,9 +175,10 @@ setInterval(function(){
             const ticker = limiter.schedule(() =>bitstamp.ticker(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) =>{
                 let amountToNumbers = global.buyingPower / body.ask
                 global.bitstampBuyData.buyAmount = +$$(
-                    $(amountToNumbers), subtractPercent(5)).toNumber().toFixed(6)
+                    $(amountToNumbers), subtractPercent(7)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
                     console.log(a, body)
+                global.bitstampData.fiveAboveTheNine = fiveAboveNine
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
                     global.bitstampBuyData.symbolInTrade = a
                     global.bitstampBuyData.buyPrice = parseFloat(body.bid)
@@ -212,6 +211,7 @@ setInterval(function(){
                         }
                     })
                 }
+            }))
                 let minOrder = global.buyingPower / global.bitstampBuyData.buyPrice
                     console.log('Min order', minOrder)
                 if (global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true){
