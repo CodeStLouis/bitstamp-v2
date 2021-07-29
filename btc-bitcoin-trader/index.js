@@ -164,6 +164,9 @@ setInterval(function(){
         console.log('buying power', data)
     })
     for(let a of crypto){
+        getAssetBalance(a).then(b =>{
+            console.log('new balance', b)
+        })
         isSma5AboveNine(a).then(fiveAboveNine =>{
             console.log(a,'returned from five is above nine ', global.bitstampData.fiveAboveTheNine)
             global.bitstampData.fiveAboveTheNine = fiveAboveNine

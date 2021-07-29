@@ -43,6 +43,7 @@ global.buyingPower={}
 const crypto = [
     'ETH',
     'LTC'
+
 ]
 let t = new Date
 const rawUtcTimeNow = (Math.floor(t.getTime()))
