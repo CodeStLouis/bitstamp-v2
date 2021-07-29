@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/bitstampV2.iml" filepath="$PROJECT_DIR$/.idea/bitstampV2.iml" />
+      <module fileurl="file://$PROJECT_DIR$/btc-bitcoin-trader/btc-bitcoin-trader.iml" filepath="$PROJECT_DIR$/btc-bitcoin-trader/btc-bitcoin-trader.iml" />
     </modules>
   </component>
 </project>
