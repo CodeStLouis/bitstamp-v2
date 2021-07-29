@@ -167,43 +167,43 @@ setInterval(function(){
     for(let a of crypto){
         isSma5AboveNine(a).then(fiveAboveNine =>{
             console.log(a,'returned from five is above nine ', fiveAboveNine)
-        sma9Promise(a, '1m').then(sma9 =>{
+        sma9Promise(a, '1m').then(sma9 => {
             console.log(a, 'return from sma nine', sma9)
             const tickerSymbol = a + '_USD'
             global.bitstampData.symbol = a
             global.bitstampData.smaNine = sma9
-            const ticker = limiter.schedule(() =>bitstamp.ticker(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) =>{
+            const ticker = limiter.schedule(() => bitstamp.ticker(CURRENCY[`${tickerSymbol}`]).then(({status,headers,body}) => {
                 let amountToNumbers = global.buyingPower / body.ask
                 global.bitstampBuyData.buyAmount = +$$(
                     $(amountToNumbers), subtractPercent(9)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
-                    console.log(a, body)
+                console.log(a, body)
 
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
-                    global.bitstampBuyData.symbolInTrade = a
-                    global.bitstampBuyData.buyPrice = parseFloat(body.bid)
+                global.bitstampBuyData.symbolInTrade = a
+                global.bitstampBuyData.buyPrice = parseFloat(body.bid)
                 global.bitstampSellData.sell = sma9 > global.bitstampData.close
                 console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine)
                 console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)
-                if (global.bitstampSellData.sell === true){
+                if (global.bitstampSellData.sell === true) {
 
 
                     console.log('inside sell')
-                    getAssetBalance(a).then(amount =>{
+                    getAssetBalance(a).then(amount => {
                         global.bitstampSellData.symbolInTrade = a
                         global.bitstampSellData.sellAmount = amount
                         global.bitstampSellData.sellPrice = parseFloat(body.ask)
                         let value = amount * global.bitstampSellData.sellPrice
-                        console.log(a, 'amount= ',amount, 'value= ', value, 'about to sell', global.bitstampSellData)
-                        if(value < 20 ){
+                        console.log(a, 'amount= ', amount, 'value= ', value, 'about to sell', global.bitstampSellData)
+                        if (value < 20) {
                             return 'Dont own that asset'
                         } else {
-                            if(global.bitstampSellData.sellAmount > 0){
-                                console.log(a,'amount to sell', global.bitstampSellData.sellAmount)
+                            if (global.bitstampSellData.sellAmount > 0) {
+                                console.log(a, 'amount to sell', global.bitstampSellData.sellAmount)
                                 console.log('selling line 200', global.bitstampSellData.sellAmount, global.bitstampSellData.sellPrice, a)
-                                sellPromiseBitstamp(global.bitstampSellData.sellAmount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade).then(data=>{
+                                sellPromiseBitstamp(global.bitstampSellData.sellAmount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade).then(data => {
                                     console.log('placed sell')
-                                }).catch(err =>{
+                                }).catch(err => {
                                     console.log(err, 'in selling line 152')
                                 })
                             }
@@ -212,57 +212,50 @@ setInterval(function(){
                     })
                 }
             }))
-                let minOrder = global.buyingPower / global.bitstampBuyData.buyPrice
-                    console.log('Min order', minOrder)
-                if (global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true){
-                    console.log('buying conditions', global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true)
-                    console.log('about to buy', global.bitstampBuyData)
-                        buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(data =>{
-                            console.log('bought stuff')
-                        }).catch(err =>{
-                            console.log(err, 'buying error line 161')
-                        })
-                }
-                    console.log('bitstamp data', global.bitstampData, 'buying data', global.bitstampBuyData, 'selling data', global.bitstampSellData, 'buying power', global.buyingPower)
+            let minOrder = global.buyingPower / global.bitstampBuyData.buyPrice
+            console.log('Min order', minOrder)
+            if (global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true) {
+                console.log('buying conditions', global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true)
+                console.log('about to buy', global.bitstampBuyData)
+                buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(data => {
+                    console.log('bought stuff')
+                }).catch(err => {
+                    console.log(err, 'buying error line 161')
+                })
             }
+            console.log('bitstamp data', global.bitstampData, 'buying data', global.bitstampBuyData, 'selling data', global.bitstampSellData, 'buying power', global.buyingPower)
 
-            ));
         })
-        sma5Promise(global.bitstampData.symbol, '1m').then(sma5 =>{
-            console.log(global.bitstampData.symbol,sma5 ,'sma 5 and close' ,global.bitstampData.close)
+        sma5Promise(global.bitstampData.symbol, '1m').then(sma5 => {
+            console.log(global.bitstampData.symbol, sma5, 'sma 5 and close', global.bitstampData.close)
             global.bitstampSellData.sell = global.bitstampData.close < sma5
-            console.log(global.bitstampData.symbol,'sma 5 and close sell signal at sma 5=' , global.bitstampSellData.sell)
-            if(global.bitstampData.sell === true){
-                getAssetBalance(a).then(amount =>{
+            console.log(global.bitstampData.symbol, 'sma 5 and close sell signal at sma 5=', global.bitstampSellData.sell)
+            if (global.bitstampData.sell === true) {
+                getAssetBalance(a).then(amount => {
                     global.bitstampSellData.sellAmount = amount
                     let value = amount * global.bitstampSellData.sellPrice
                     console.log('value', value)
-                    if(value < 20 ){
-                        console.log(a,'dont own asset')
+                    if (value < 20) {
+                        console.log(a, 'dont own asset')
                         return 'Dont own that asset'
                     } else {
-                        if(amount > 0){
+                        if (amount > 0) {
                             console.log('selling', amount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade)
-                            sellPromiseBitstamp(amount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade).then(data=>{
+                            sellPromiseBitstamp(amount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade).then(data => {
                                 console.log('placed sell')
-                            }).catch(err =>{
+                            }).catch(err => {
                                 console.log(err, 'in selling line 152')
                             })
                         }
 
-                    }
-                })
-            }
-
+                        }
+                  })
+                }
+            })
 
         })
     }
 
 }, 20000)
 
-const bitstampStream = new BitstampStream();
-
-/*await bitstamp.buyLimitOrder(amount, price, currency, limit_price, daily_order);
-
-await bitstamp.sellLimitOrder(amount, price, currency, limit_price, daily_order);*/
 app.listen(process.env.PORT);
