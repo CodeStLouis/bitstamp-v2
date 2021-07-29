@@ -172,6 +172,7 @@ setInterval(function(){
             console.log(a, 'return from sma nine', sma9)
             const tickerSymbol = a + '_USD'
             global.bitstampData.symbol = a
+            global.bitstampData.smaNine = sma9
             const ticker = limiter.schedule(() =>bitstamp.ticker(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) =>{
                     let amountToNumbers = global.buyingPower / body.ask
                     global.bitstampBuyData.buyAmount = +$$(
