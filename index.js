@@ -99,7 +99,7 @@ async function isSma5AboveNine(asset){
                 $(sma5), subtractPercent(1))*/
             let smaFiveIsAboveNine = sma5 > smaNine // buy a certain percentage
             console.log(asset, 'Sma five is greater than 9? 5m', smaFiveIsAboveNine,'sma9=', smaNine, 'sma5=', sma5)
-           // global.bitstampData.fiveAboveTheNine = smaFiveIsAboveNine
+            global.bitstampData.fiveAboveTheNine = smaFiveIsAboveNine
             return smaFiveIsAboveNine
         })
 
@@ -175,10 +175,10 @@ setInterval(function(){
             const ticker = limiter.schedule(() =>bitstamp.ticker(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) =>{
                 let amountToNumbers = global.buyingPower / body.ask
                 global.bitstampBuyData.buyAmount = +$$(
-                    $(amountToNumbers), subtractPercent(7)).toNumber().toFixed(6)
+                    $(amountToNumbers), subtractPercent(9)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
                     console.log(a, body)
-                global.bitstampData.fiveAboveTheNine = fiveAboveNine
+
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
                     global.bitstampBuyData.symbolInTrade = a
                     global.bitstampBuyData.buyPrice = parseFloat(body.bid)
