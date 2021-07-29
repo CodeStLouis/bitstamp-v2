@@ -193,16 +193,19 @@ setInterval(function(){
                         global.bitstampSellData.sellAmount = amount
                         let value = amount * global.bitstampSellData.sellPrice
                         console.log('value', value)
-                        if(value < 20 && amount > 0){
+                        if(value < 20 ){
                             console.log(a,'dont own asset')
                             return 'Dont own that asset'
                         } else {
-                            console.log('selling line 200', amount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade)
-                            sellPromiseBitstamp(amount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade).then(data=>{
-                                console.log('placed sell')
-                            }).catch(err =>{
-                                console.log(err, 'in selling line 152')
-                            })
+                            if(amount > 0){
+                                console.log('selling line 200', amount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade)
+                                sellPromiseBitstamp(amount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade).then(data=>{
+                                    console.log('placed sell')
+                                }).catch(err =>{
+                                    console.log(err, 'in selling line 152')
+                                })
+                            }
+
                         }
                     })
                 }
