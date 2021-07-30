@@ -157,7 +157,7 @@ async function cancelOrders(){
     return orders
 }
 setInterval(function(){
-    console.log('customers bot'. process.env.CLIENTNAME)
+    //console.log('customers bot'. process.env.CLIENTNAME)
     cancelOrders().then(data =>{
         console.log('canceled orders', data.body)
     })
