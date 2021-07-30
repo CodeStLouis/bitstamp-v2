@@ -158,6 +158,7 @@ async function cancelOrders(){
     return orders
 }
 setInterval(function(){
+    console.log('customers bot'. process.env.CLIENTNAME)
     cancelOrders().then(data =>{
         console.log('canceled orders', data.body)
     })
@@ -167,8 +168,6 @@ setInterval(function(){
     for(let a of crypto){
         isSma5AboveNine(a).then(fiveAboveNine =>{
             console.log(a,'returned from five is above nine ', global.bitstampData.fiveAboveTheNine)
-            global.bitstampData.fiveAboveTheNine = fiveAboveNine
-        })
         sma9Promise(a, '1m').then(sma9 =>{
             console.log(a, 'return from sma nine', sma9)
             const tickerSymbol = a + '_USD'
@@ -253,7 +252,7 @@ setInterval(function(){
                     }
                 })
             }
-
+        })
 
         })
     }
