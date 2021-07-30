@@ -178,7 +178,7 @@ setInterval(function(){
             global.bitstampData.symbol = a
             global.bitstampData.smaNine = sma9
             const ticker = limiter.schedule(() =>bitstamp.ticker(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) =>{
-                    let amountToNumbers = global.buyingPower / body.ask
+                    let amountToNumbers = global.buyingPower / body.bid
                     global.bitstampBuyData.buyAmount = +$$(
                         $(amountToNumbers), subtractPercent(5)).toNumber().toFixed(6)
                     global.bitstampData.close = body.last
