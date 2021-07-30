@@ -181,7 +181,7 @@ setInterval(function(){
                     console.log(a, body)
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
                     global.bitstampBuyData.symbolInTrade = a
-                    global.bitstampBuyData.buyPrice = parseFloat(body.ask)
+                    global.bitstampBuyData.buyPrice = parseFloat(body.bid)
                 global.bitstampSellData.sell = sma9 > global.bitstampData.close
                 console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine)
                 console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)
