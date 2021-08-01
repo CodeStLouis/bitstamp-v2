@@ -247,7 +247,7 @@ setInterval(function(){
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
                 global.bitstampBuyData.symbolInTrade = a
                 global.bitstampBuyData.buyPrice = parseFloat(body.bid)
-                global.bitstampSellData.sell = sma9 > global.bitstampData.close
+                global.bitstampSellData.sell = global.bitstampData.fiveAboveTheNine === false
                 console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine)
                 console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)
                 if (global.bitstampSellData.sell === true) {
@@ -274,7 +274,7 @@ setInterval(function(){
                         }
                     })
                 }
-            }))
+
             let minOrder = global.buyingPower / global.bitstampBuyData.buyPrice
             console.log('Min order', minOrder)
             if (global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true) {
@@ -295,10 +295,11 @@ setInterval(function(){
                         })
                     }
                 })
-                console.log('bitstamp data', global.bitstampData, 'buying data', global.bitstampBuyData, 'selling data', global.bitstampSellData, 'buying power', global.buyingPower)
+
+            console.log('bitstamp data', global.bitstampData, 'buying data', global.bitstampBuyData, 'selling data', global.bitstampSellData, 'buying power', global.buyingPower)
 
             }
-        })
+        }))
         sma5Promise(a, '1m').then(sma5 => {
             console.log(a, sma5, 'sma 5 and close', global.bitstampData.close)
             global.bitstampSellData.sell = global.bitstampData.close < sma5
