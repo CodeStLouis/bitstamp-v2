@@ -2,10 +2,13 @@ const express = require('express');
 const app = express();
 require('dotenv').config()
 const dotenv = require('dotenv')
+const fetch = require("node-fetch");
+const { v4: uuidv4 } = require('uuid');
 const Bottleneck = require("bottleneck");
 const { $, gt } = require('moneysafe');
 const { $$, subtractPercent, addPercent } = require('moneysafe/ledger');
 const {BitstampStream, Bitstamp, CURRENCY} = require("node-bitstamp");
+const taapi = require("taapi");
 const key = process.env.key;
 const secret = process.env.secret;
 const clientId = process.env.clientId
@@ -18,8 +21,8 @@ const bitstamp = new Bitstamp({
 });
 
 const limiter = new Bottleneck({
-    maxConcurrent: 5,
-    minTime: 500
+    maxConcurrent: 1,
+    minTime: 2000
 });
 global.bitstampSellData ={
     symbolInTrade:{},
@@ -37,16 +40,76 @@ global.bitstampData ={
     symbol:{},
     amount:{},
     close:{},
-    smaNine:{}
+    smaNine:{},
+    engulfedValue:{},
+    MACDHistogram:{},
+    RSI:{},
+    UUID:{}
 }
 global.buyingPower={}
+const client = taapi.client("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g");
 const crypto = [
     'ETH',
 
 ]
 let t = new Date
 const rawUtcTimeNow = (Math.floor(t.getTime()))
+async function MACD(cryptoSymbol, interval){
+    const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
+    // const interval = '1h'
+    const symbol = cryptoSymbol + '/USDT'
+    const requestMACD = await limiter.schedule(() => fetch(
+        `https://api.taapi.io/macd?secret=${secret}&exchange=binance&symbol=${symbol}&interval=${interval}`,
+    ));
+    const macdValue = await requestMACD.json();
+    Object.entries(macdValue).forEach(([key, value]) => {
+        if (key === 'valueMACDHist' && macdValue.valueMACDHist > 0){
+            const MACDHist = macdValue.valueMACDHist
 
+              console.log('crypto symbol MACD is Positive:', cryptoSymbol, MACDHist)
+            return MACDHist
+        }
+
+    })
+    return macdValue.valueMACDHist
+}
+async function RSI(cryptoSymbol, interval){
+    const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
+    // const interval = '1h'
+    const requestRSI = await fetch(
+        `https://api.taapi.io/rsi?secret=${secret}&exchange=binance&symbol=${cryptoSymbol}&interval=${interval}`,
+    );
+    const rsiValue = await requestRSI.json()
+    Object.entries(rsiValue).forEach(([key, value]) => {
+        //  console.log('crypto symbol:', cryptoSymbol, 'RSI = ', value.value)
+        if (value.value < 35){
+            const RSIProfile = [{symbol: cryptoSymbol, rsi: value}]
+            //   console.log('in rsi function', interval, ' rsi low =', value.value )
+        }
+    })
+    // console.log('returned rsi value', rsiValue)
+    return rsiValue.value
+}
+async function engulfedCandle(cryptoSymbol, interval){
+    const symbol = cryptoSymbol + '/USDT'
+    const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
+    // const interval = '1h'
+    const requestIfCandleIsEngulfed = await limiter.schedule(() => fetch(
+        `https://api.taapi.io/engulfing?secret=${secret}&exchange=binance&symbol=${symbol}&interval=${interval}`,
+    ));
+    const engulfedValue = await requestIfCandleIsEngulfed.json()
+    Object.entries(engulfedValue).forEach(([key, value]) => {
+        if (key === 'value' && engulfedValue > 0){
+            const engulfed = engulfedValue
+
+            //   console.log('crypto symbol:', cryptoSymbol, 'MACD = ', MACDPositiveSymbols)
+            return engulfedValue
+        }
+
+    })
+    console.log('returned inside engulfed', engulfedValue)
+    return engulfedValue
+}
 const sma = require('trading-indicator').sma
 async function getSMANine(s, i){
    // console.log(s, 'in sma9')
@@ -97,7 +160,7 @@ async function isSma5AboveNine(asset){
         getSMAFive(asset, '1m').then(sma5 =>{
            /* let smaFive = +$$(
                 $(sma5), subtractPercent(1))*/
-            let smaFiveIsAboveNine = sma5 > smaNine // buy a certain percentage
+            let smaFiveIsAboveNine = sma5 >= smaNine // buy a certain percentage
             console.log(asset, 'Sma five is greater than 9? 5m', smaFiveIsAboveNine,'sma9=', smaNine, 'sma5=', sma5)
             global.bitstampData.fiveAboveTheNine = smaFiveIsAboveNine
             return smaFiveIsAboveNine
@@ -159,6 +222,7 @@ async function cancelOrders(){
 }
 setInterval(function(){
    // console.log('customers bot'. process.env.CLIENTNAME)
+
     cancelOrders().then(data =>{
         console.log('canceled orders', data.body)
     })
@@ -166,6 +230,18 @@ setInterval(function(){
         console.log('buying power', data)
     })
     for(let a of crypto){
+
+        global.bitstampData.UUID = uuidv4()
+      /*  engulfedCandle(a, '1m').then(eng =>{
+            console.log('candle engulfed previous', eng.value)
+            global.bitstampData.engulfedValue = eng.value
+        })*/
+        MACD(a, '1m').then(macd =>{
+            global.bitstampData.MACDHistogram = macd;
+        })
+       /* RSI(a, '1m').then(rsi =>{
+            global.bitstampData.RSI = rsi;
+        })*/
         isSma5AboveNine(a).then(fiveAboveNine =>{
             console.log(a,'returned from five is above nine ', global.bitstampData.fiveAboveTheNine)
         sma9Promise(a, '1m').then(sma9 =>{
@@ -176,17 +252,17 @@ setInterval(function(){
             const ticker = limiter.schedule(() =>bitstamp.ticker(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) =>{
                 let amountToNumbers = global.buyingPower / body.ask
                 global.bitstampBuyData.buyAmount = +$$(
-                    $(amountToNumbers), subtractPercent(8)).toNumber().toFixed(6)
+                    $(amountToNumbers), subtractPercent(11)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
-                    console.log(a, body)
+                    console.log(a, body, 'amount to buy', global.bitstampBuyData.buyAmount)
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
                     global.bitstampBuyData.symbolInTrade = a
                     global.bitstampBuyData.buyPrice = parseFloat(body.bid)
                 global.bitstampSellData.sell = sma9 > global.bitstampData.close
-                console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine)
-                console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)
+                    let positiveMACD = global.bitstampData.MACDHistogram > 0.0
+                console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine, 'MACD is Positive', positiveMACD)
+                console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell, 'MACD is negative', positiveMACD)
                 if (global.bitstampSellData.sell === true){
-
 
                     console.log('inside sell')
                     getAssetBalance(a).then(amount =>{
@@ -216,10 +292,18 @@ setInterval(function(){
                 if (global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true){
                     console.log('buying conditions', global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true)
                     console.log('about to buy', global.bitstampBuyData)
-                        buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(data =>{
+                       buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(data =>{
                             console.log('bought stuff')
                         }).catch(err =>{
-                            console.log(err, 'buying error line 161')
+                           let amountToNumbers = global.buyingPower / body.ask
+                           global.bitstampBuyData.buyAmount = +$$(
+                               $(amountToNumbers), subtractPercent(15)).toNumber().toFixed(6)
+                            console.log('second try to buy', err, 'buying error line 161')
+                           buyPromiseBitstamp( global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(resp =>{
+                               console.log('second attempt to buy')
+                           }).catch(err =>{
+                               console.log(err, global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade )
+                           })
                         })
                 }
                     console.log('bitstamp data', global.bitstampData, 'buying data', global.bitstampBuyData, 'selling data', global.bitstampSellData, 'buying power', global.buyingPower)
