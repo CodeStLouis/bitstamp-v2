@@ -232,10 +232,10 @@ setInterval(function(){
     for(let a of crypto){
 
         global.bitstampData.UUID = uuidv4()
-        engulfedCandle(a, '1m').then(eng =>{
+       /* engulfedCandle(a, '1m').then(eng =>{
             console.log('candle engulfed previous', eng.value)
             global.bitstampData.engulfedValue = eng.value
-        })
+        })*/
        /* MACD(a, '1m').then(macd =>{
             global.bitstampData.MACDHistogram = macd;
         })*/
@@ -259,7 +259,7 @@ setInterval(function(){
                     global.bitstampBuyData.symbolInTrade = a
                     global.bitstampBuyData.buyPrice = parseFloat(body.bid)
                 global.bitstampSellData.sell = global.bitstampData.fiveAboveTheNine === false
-                    let positiveMACD = Math.sign(global.bitstampData.MACDHistogram)
+                    //let positiveMACD = Math.sign(global.bitstampData.MACDHistogram)
                 console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine, 'MACD is Positive', positiveMACD)
                 console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell, 'MACD is negative', positiveMACD)
                 if (global.bitstampSellData.sell === true){

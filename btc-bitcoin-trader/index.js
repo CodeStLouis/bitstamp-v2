@@ -241,7 +241,7 @@ setInterval(function(){
             const ticker = limiter.schedule(() => bitstamp.ticker(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) => {
                 let amountToNumbers = global.buyingPower / body.ask
                 global.bitstampBuyData.buyAmount = +$$(
-                    $(amountToNumbers), subtractPercent(9)).toNumber().toFixed(6)
+                    $(amountToNumbers), subtractPercent(11)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
                 console.log(a, body)
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
@@ -302,7 +302,7 @@ setInterval(function(){
             }))
             sma5Promise(a, '1m').then(sma5 => {
                 console.log(a, sma5, 'sma 5 and close', global.bitstampData.close)
-                global.bitstampSellData.sell = global.bitstampData.close < sma5
+                global.bitstampSellData.sell = global.bitstampData.fiveAboveTheNine === false
                 console.log(global.bitstampData.symbol, 'sma 5 and close sell signal at sma 5=', global.bitstampSellData.sell)
                 if (global.bitstampData.sell === true) {
                     getAssetBalance(a).then(amount => {
