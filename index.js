@@ -312,7 +312,7 @@ setInterval(function(){
         })
         sma5Promise(global.bitstampData.symbol, '1m').then(sma5 =>{
             console.log(global.bitstampData.symbol,sma5 ,'sma 5 and close' ,global.bitstampData.close)
-            global.bitstampSellData.sell = global.bitstampData.close < sma5
+            global.bitstampSellData.sell = global.bitstampData.fiveAboveTheNine === false
             console.log(global.bitstampData.symbol,'sma 5 and close sell signal at sma 5=' , global.bitstampSellData.sell)
             if(global.bitstampData.sell === true){
                 getAssetBalance(a).then(amount =>{
