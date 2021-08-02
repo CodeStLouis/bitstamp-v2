@@ -49,9 +49,7 @@ global.bitstampData ={
 global.buyingPower={}
 const client = taapi.client("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g");
 const crypto = [
-    'ETH',
-    'LTC'
-
+    'ETH'
 ]
 let t = new Date
 const rawUtcTimeNow = (Math.floor(t.getTime()))
@@ -259,10 +257,10 @@ setInterval(function(){
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
                     global.bitstampBuyData.symbolInTrade = a
                     global.bitstampBuyData.buyPrice = parseFloat(body.bid)
-                global.bitstampSellData.sell = global.bitstampData.fiveAboveTheNine === false
+                global.bitstampSellData.sell = (global.bitstampData.fiveAboveTheNine === false || sma9 < body.last)
                     //let positiveMACD = Math.sign(global.bitstampData.MACDHistogram)
-                console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine, 'MACD is Positive', positiveMACD)
-                console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell, 'MACD is negative', positiveMACD)
+                console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine)
+                console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)
                 if (global.bitstampSellData.sell === true){
                     console.log('inside sell')
                     getAssetBalance(a).then(amount =>{
@@ -313,7 +311,7 @@ setInterval(function(){
         })
         sma5Promise(global.bitstampData.symbol, '1m').then(sma5 =>{
             console.log(global.bitstampData.symbol,sma5 ,'sma 5 and close' ,global.bitstampData.close)
-            global.bitstampSellData.sell = global.bitstampData.fiveAboveTheNine === false
+            global.bitstampSellData.sell = (global.bitstampData.fiveAboveTheNine === false || sma5 < global.bitstampData.close)
             console.log(global.bitstampData.symbol,'sma 5 and close sell signal at sma 5=' , global.bitstampSellData.sell)
             if(global.bitstampData.sell === true){
                 getAssetBalance(a).then(amount =>{
