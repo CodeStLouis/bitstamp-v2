@@ -241,7 +241,7 @@ setInterval(function(){
             const ticker = limiter.schedule(() => bitstamp.ticker(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) => {
                 let amountToNumbers = global.buyingPower / body.ask
                 global.bitstampBuyData.buyAmount = +$$(
-                    $(amountToNumbers), subtractPercent(11)).toNumber().toFixed(6)
+                    $(amountToNumbers), subtractPercent(15)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
                 console.log(a, body)
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
