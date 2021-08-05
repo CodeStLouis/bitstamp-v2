@@ -265,7 +265,7 @@ setInterval(function(){
                         global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
                         global.bitstampBuyData.symbolInTrade = a
                         global.bitstampBuyData.buyPrice = parseFloat(body.bid)
-                        global.bitstampSellData.sell = (global.bitstampData.fiveAboveTheNine === false || sma9 < body.last)
+                        global.bitstampSellData.sell = global.bitstampData.fiveAboveTheNine === false
                        // let positiveMACD = Math.sign(global.bitstampData.MACDHistogram)
                         console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine)
                         console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)

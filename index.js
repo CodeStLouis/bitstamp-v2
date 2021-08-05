@@ -254,10 +254,10 @@ setInterval(function(){
                     $(amountToNumbers), subtractPercent(11)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
                     console.log(a, body, 'amount to buy', global.bitstampBuyData.buyAmount)
-                global.bitstampBuyData.buy = sma9 < global.bitstampData.close && global.bitstampData.fiveAboveTheNine === true
+                global.bitstampBuyData.buy = sma9 < global.bitstampData.close
                     global.bitstampBuyData.symbolInTrade = a
                     global.bitstampBuyData.buyPrice = parseFloat(body.bid)
-                global.bitstampSellData.sell = (global.bitstampData.fiveAboveTheNine === false || sma9 < body.last)
+                global.bitstampSellData.sell = (sma9 < body.last)
                     //let positiveMACD = Math.sign(global.bitstampData.MACDHistogram)
                 console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine)
                 console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)
@@ -311,8 +311,8 @@ setInterval(function(){
         })
         sma5Promise(global.bitstampData.symbol, '1m').then(sma5 =>{
             console.log(global.bitstampData.symbol,sma5 ,'sma 5 and close' ,global.bitstampData.close)
-            global.bitstampSellData.sell = (global.bitstampData.fiveAboveTheNine === false || sma5 < global.bitstampData.close)
-            console.log(global.bitstampData.symbol,'sma 5 and close sell signal at sma 5=' , global.bitstampSellData.sell)
+            global.bitstampSellData.sell = (global.bitstampData.fiveAboveTheNine === false)
+            console.log(global.bitstampData.symbol,'sma 5 and close sell signal at sma 5 line 315 =' , global.bitstampSellData.sell)
             if(global.bitstampData.sell === true){
                 getAssetBalance(a).then(amount =>{
                     global.bitstampSellData.sellAmount = amount
