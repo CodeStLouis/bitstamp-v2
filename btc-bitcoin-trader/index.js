@@ -53,9 +53,11 @@ const crypto = [
 let t = new Date
 const rawUtcTimeNow = (Math.floor(t.getTime()))
 async function MACD(cryptoSymbol, interval){
+
     const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
     // const interval = '1h'
     const symbol = cryptoSymbol + '/USDT'
+
     const requestMACD = await limiter.schedule(() => fetch(
         `https://api.taapi.io/macd?secret=${secret}&exchange=binance&symbol=${symbol}&interval=${interval}`,
     ));
@@ -69,13 +71,16 @@ async function MACD(cryptoSymbol, interval){
         }
 
     })
+    console.log(symbol,'MACD in function symbol', macdValue.valueMACDHist, macdValue)
     return macdValue.valueMACDHist
 }
 async function RSI(cryptoSymbol, interval){
+    const taapiSymbol = cryptoSymbol + '/USDT'
+    //console.log('rsi symbol', taapiSymbol)
     const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
     // const interval = '1h'
     const requestRSI = await fetch(
-        `https://api.taapi.io/rsi?secret=${secret}&exchange=binance&symbol=${cryptoSymbol}&interval=${interval}`,
+        `https://api.taapi.io/rsi?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${interval}`,
     );
     const rsiValue = await requestRSI.json()
     Object.entries(rsiValue).forEach(([key, value]) => {
@@ -85,7 +90,7 @@ async function RSI(cryptoSymbol, interval){
             //   console.log('in rsi function', interval, ' rsi low =', value.value )
         }
     })
-    // console.log('returned rsi value', rsiValue)
+     //console.log(cryptoSymbol,'returned rsi value in function', rsiValue)
     return rsiValue.value
 }
 async function engulfedCandle(cryptoSymbol, interval){
@@ -229,10 +234,24 @@ setInterval(function(){
         getAssetBalance(a).then(b => {
             console.log('new balance', b)
         })
-        isSma5AboveNine(a).then(fiveAboveNine => {
+      /*  isSma5AboveNine(a).then(fiveAboveNine => {
             console.log(a, 'returned from five is above nine ', global.bitstampData.fiveAboveTheNine)
 
+        })*/
+        RSI(a, '1m').then(rsi =>{
+            console.log(a, 'rsi return', rsi)
+            global.bitstampData.RSI = rsi
+            if (global.bitstampData.RSI < 40){
+                global.bitstampBuyData.buy === true
+                console.log('buying', global.bitstampBuyData)
+                buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(buy =>{
+                    console.log('purchased BTC RSI lower than 40', buy)
+                })
+            }
         })
+      /*  MACD(a, '1m').then(macd =>{
+            console.log('returned from MACD', macd)
+        })*/
         sma9Promise(a, '1m').then(sma9 => {
             console.log(a, 'return from sma nine', sma9)
             const tickerSymbol = a + '_USD'
@@ -247,8 +266,8 @@ setInterval(function(){
                 global.bitstampBuyData.buy = sma9 < global.bitstampData.close
                 global.bitstampBuyData.symbolInTrade = a
                 global.bitstampBuyData.buyPrice = parseFloat(body.bid)
-                global.bitstampSellData.sell = (sma9 > body.last)
-                console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy, '5 above 9', global.bitstampData.fiveAboveTheNine)
+                global.bitstampSellData.sell = (sma9 > body.last && global.bitstampData.RSI > 40)
+                console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy)
                 console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)
                 if (global.bitstampSellData.sell === true) {
                     console.log('inside sell')
@@ -277,11 +296,11 @@ setInterval(function(){
 
                 let minOrder = global.buyingPower / global.bitstampBuyData.buyPrice
                 console.log('Min order', minOrder)
-                if (global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true) {
+                if (global.bitstampBuyData.buy === true && global.buyingPower > 20) {
                     console.log('buying conditions', global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true)
                     console.log('about to buy', global.bitstampBuyData)
                     buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(data => {
-                        console.log('bought stuff')
+                        console.log('bought stuff', data)
                     }).catch(err => {
                         if (global.bitstampSellData.sell === true) {
                             console.log('inside sell')
@@ -300,7 +319,7 @@ setInterval(function(){
 
                 }
             }))
-            sma5Promise(a, '1m').then(sma5 => {
+            /*sma5Promise(a, '1m').then(sma5 => {
                 console.log(a, sma5, 'sma 5 and close', global.bitstampData.close)
                 global.bitstampSellData.sell = (sma5 < global.bitstampData.close)
                 console.log(global.bitstampData.symbol, 'sma 5 and close sell signal at sma 5=', global.bitstampSellData.sell)
@@ -326,7 +345,7 @@ setInterval(function(){
                     })
                 }
 
-            })
+            })*/
         })
     }
 }, 20000)
