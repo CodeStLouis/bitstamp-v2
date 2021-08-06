@@ -34,7 +34,8 @@ global.bitstampBuyData = {
     symbolInTrade:{},
     buyPrice:{},
     buyAmount:{},
-    buy:{}
+    buy:{},
+    engulfingBuy:{}
 }
 global.bitstampData ={
     symbol:{},
@@ -44,11 +45,13 @@ global.bitstampData ={
     engulfedValue:{},
     MACDHistogram:{},
     RSI:{},
-    UUID:{}
+    UUID:{},
+    time:{}
 }
 global.buyingPower={}
 const crypto = [
-   'BTC'
+   'BTC',
+    'ETH'
 ]
 let t = new Date
 const rawUtcTimeNow = (Math.floor(t.getTime()))
@@ -73,6 +76,24 @@ async function MACD(cryptoSymbol, interval){
     })
     console.log(symbol,'MACD in function symbol', macdValue.valueMACDHist, macdValue)
     return macdValue.valueMACDHist
+}
+async function readableTimestamp(timestamp){
+
+    let unix_timestamp = timestamp
+// Create a new JavaScript Date object based on the timestamp
+// multiplied by 1000 so that the argument is in milliseconds, not seconds.
+    var date = new Date(unix_timestamp * 1000);
+// Hours part from the timestamp
+    var hours = date.getHours();
+// Minutes part from the timestamp
+    var minutes = "0" + date.getMinutes();
+// Seconds part from the timestamp
+    var seconds = "0" + date.getSeconds();
+
+// Will display time in 10:30:23 format
+    var formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+
+    console.log(formattedTime);
 }
 async function RSI(cryptoSymbol, interval){
     const taapiSymbol = cryptoSymbol + '/USDT'
@@ -243,6 +264,7 @@ setInterval(function(){
             global.bitstampData.RSI = rsi
             if (global.bitstampData.RSI < 40){
                 global.bitstampBuyData.buy === true
+                global.bitstampBuyData.engulfingBuy === true
                 console.log('buying', global.bitstampBuyData)
                 buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(buy =>{
                     console.log('purchased BTC RSI lower than 40', buy)
@@ -263,14 +285,15 @@ setInterval(function(){
                     $(amountToNumbers), subtractPercent(15)).toNumber().toFixed(6)
                 global.bitstampData.close = body.last
                 console.log(a, body)
-                global.bitstampBuyData.buy = sma9 < global.bitstampData.close
+                global.bitstampBuyData.buy = (sma9 < global.bitstampData.close || global.bitstampData.RSI < 40)
                 global.bitstampBuyData.symbolInTrade = a
                 global.bitstampBuyData.buyPrice = parseFloat(body.bid)
-                global.bitstampSellData.sell = (sma9 > body.last && global.bitstampData.RSI > 40)
+                global.bitstampData.time = body.timestamp
+                global.bitstampSellData.sell = (sma9 > body.last && global.bitstampBuyData.engulfingBuy !== true)
                 console.log(a, sma9, 'sma nine lower than close', global.bitstampData.close, 'buy?', global.bitstampBuyData.buy)
                 console.log(a, sma9, 'sma nine greater than close', global.bitstampData.close, 'sell?', global.bitstampSellData.sell)
                 if (global.bitstampSellData.sell === true) {
-                    console.log('inside sell')
+                    console.log('inside sell line 295')
                     getAssetBalance(a).then(amount => {
                         global.bitstampSellData.symbolInTrade = a
                         global.bitstampSellData.sellAmount = amount
@@ -284,9 +307,9 @@ setInterval(function(){
                                 console.log(a, 'amount to sell', global.bitstampSellData.sellAmount)
                                 console.log('selling line 200', global.bitstampSellData.sellAmount, global.bitstampSellData.sellPrice, a)
                                 sellPromiseBitstamp(global.bitstampSellData.sellAmount, global.bitstampSellData.sellPrice, global.bitstampSellData.symbolInTrade).then(data => {
-                                    console.log('placed sell')
+                                    console.log('placed sell line 309')
                                 }).catch(err => {
-                                    console.log(err, 'in selling line 152')
+                                    console.log(err, 'in selling line 311')
                                 })
                             }
 
@@ -297,21 +320,23 @@ setInterval(function(){
                 let minOrder = global.buyingPower / global.bitstampBuyData.buyPrice
                 console.log('Min order', minOrder)
                 if (global.bitstampBuyData.buy === true && global.buyingPower > 20) {
-                    console.log('buying conditions', global.bitstampBuyData.buy === true && global.buyingPower > 20 && global.bitstampData.fiveAboveTheNine === true)
-                    console.log('about to buy', global.bitstampBuyData)
+                    console.log('buying conditions 322', global.bitstampBuyData.buy === true && global.buyingPower > 20)
+                    console.log('about to buy line 323', global.bitstampBuyData)
                     buyPromiseBitstamp(global.bitstampBuyData.buyAmount, global.bitstampBuyData.buyPrice, global.bitstampBuyData.symbolInTrade).then(data => {
-                        console.log('bought stuff', data)
+                        global.bitstampBuyData.engulfingBuy = false
+                        console.log('bought stuff returned from bitstamp', data)
                     }).catch(err => {
-                        if (global.bitstampSellData.sell === true) {
-                            console.log('inside sell')
-                            getAssetBalance(a).then(amount => {
-                                global.bitstampSellData.symbolInTrade = a
-                                global.bitstampSellData.sellAmount = amount
-                                global.bitstampSellData.sellPrice = parseFloat(body.ask)
-                                let value = amount * global.bitstampSellData.sellPrice
-                                console.log(a, 'amount= ', amount, 'value= ', value, 'about to sell', global.bitstampSellData)
-                                console.log(err, 'buying error line 161')
-                            })
+                        console.log('inside buying error',err)
+                        if (global.bitstampBuyData.buy === true) {
+                                global.bitstampBuyData.symbolInTrade = a
+                            let amount = +$$(
+                                $(amountToNumbers), subtractPercent(15)).toNumber().toFixed(6)
+                                global.bitstampBuyData.buyAmount = amount
+                                global.bitstampBuyData.buyPrice = parseFloat(body.ask)
+                                let value = amount * global.bitstampSellData.buyPrice
+                                console.log(a, 'amount= ', amount, 'value= ', value, 'about to buy', global.bitstampBuyData)
+                                console.log(err, 'buying error line 337')
+
                         }
                     })
 
