@@ -28,7 +28,7 @@ const binanceUS = new BinanceUS().options({
     verbose: true,
 });
 const limiter = new Bottleneck({
-    maxConcurrent: 10,
+    maxConcurrent: 1,
     minTime: 500
 });
 global.bitstampSellData ={
@@ -46,16 +46,20 @@ global.bitstampBuyData = {
     smaHasCrossedSincePurchase: {}
 }
 global.tradeDataFromTwitty ={
+    humanTime:{},
     symbol:{},
-    amount:{},
     open:{},
     close:{},
     sma9:{},
     sar:{},
+    candleColor:{},
+    sarLessThanOpen:{},
     smaFiveAboveNine:{},
     engulfedValue:{},
+    assetInConsolidation: {},
     MACDHistogram:{},
     undersold:{},
+    oversold:{},
     RSI:{},
     stochasticRsiKaboveD:{},
     MACDHasCrossedSinceLastBuy:{},
@@ -64,60 +68,84 @@ global.tradeDataFromTwitty ={
 }
 global.buyingPower={}
 const crypto = [
-   'ETH','BTC'
+   'BTC'
 ]
 let t = new Date
 const rawUtcTimeNow = (Math.floor(t.getTime()))
+
 async function candles(a, i){
     const taapiSymbol = a + '/USDT'
     console.log('inside  candles symbol', taapiSymbol)
     const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
     // const interval = '1h'
-    const requestCandles = await limiter.schedule(() => fetch(
+    const requestCandles = await fetch(
         `https://api.taapi.io/candles?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
-    ));
+    );
     const candles = await requestCandles.json()
+    // console.log(a,'at interval' ,i , 'candles returned from taapi inside function ', candles[candles.length - 1]);
+    const requestStochRSI = await fetch(
+        `https://api.taapi.io/stochrsi?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}&kPeriod=3&dPeriod=3`,
+    );
+    const stochRsiValue = await requestStochRSI.json()
+    let smaData = await sma(30, "close", "binance", taapiSymbol, i, false)
+
+    const requestRSI = await fetch(
+        `https://api.taapi.io/rsi?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
+    );
+    const rsiValue = await requestRSI.json()
+
+    const requestSAR = await fetch(
+        `https://api.taapi.io/sar?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
+    );
+    const SARValue = await requestSAR.json()
+
+    const requestMACD = await fetch(
+        `https://api.taapi.io/macd?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
+    );
+    const macdValue = await requestMACD.json();
+
     global.tradeDataFromTwitty.symbol = a
     global.tradeDataFromTwitty.open = candles[candles.length - 1].open
     global.tradeDataFromTwitty.close = candles[candles.length - 1].close
-    // console.log(a,'at interval' ,i , 'candles returned from taapi inside function ', candles[candles.length - 1]);
-    const requestStochRSI = await limiter.schedule(() => fetch(
-        `https://api.taapi.io/stochrsi?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}&kPeriod=3&dPeriod=3`,
-    ));
-    const stochRsiValue = await requestStochRSI.json()
-    global.tradeDataFromTwitty.stochValueK = stochRsiValue.valueFastK
-    global.tradeDataFromTwitty.stochValueD = stochRsiValue.valueFastD
-    global.tradeDataFromTwitty.stochasticRsiKaboveD = global.tradeDataFromTwitty.stochValueK > global.tradeDataFromTwitty.stochValueD
-    let smaData = await limiter.schedule(() =>sma(30, "close", "binance", taapiSymbol, i, false))
-    let lastSMANinecandle = smaData[smaData.length - 1]
-    global.tradeDataFromTwitty.sma9 = lastSMANinecandle
-    const requestRSI = await limiter.schedule(() => fetch(
-        `https://api.taapi.io/rsi?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
-    ));
-    const rsiValue = await requestRSI.json()
+    if(candles[candles.length - 1].open < candles[candles.length - 1].close){
+        global.tradeDataFromTwitty.candleColor = 'GREEN'
+    } else {
+        global.tradeDataFromTwitty.candleColor = 'RED'
+    }
+    global.tradeDataFromTwitty.sma9 = smaData[smaData.length - 1]
+    global.tradeDataFromTwitty.MACDHistogram = macdValue.valueMACDHist
+    if(macdValue.valueMACDHist > 0){
+        global.tradeDataFromTwitty.MACDHasCrossedSinceLastBuy = true
+    }
+
+    global.tradeDataFromTwitty.sar = SARValue.value
+    global.tradeDataFromTwitty.sarLessThanOpen  = SARValue.value < candles[candles.length - 1].open
+    if (global.tradeDataFromTwitty.sarLessThanOpen !== true){
+        // todo record a downtrend pattern before deeming consolidation pattern
+        global.tradeDataFromTwitty.assetInConsolidation = true
+    } else {
+        global.tradeDataFromTwitty.assetInConsolidation = false
+    }
     global.tradeDataFromTwitty.RSI = rsiValue.value
-    if (rsiValue.value < 45){
+    const stochValueK = stochRsiValue.valueFastK
+    const stochValueD = stochRsiValue.valueFastD
+    global.tradeDataFromTwitty.stochasticRsiKaboveD = stochValueK > stochValueD
+    if (rsiValue.value <= 41){
         global.tradeDataFromTwitty.undersold = true
     }
-    const requestSAR = await limiter.schedule(() => fetch(
-        `https://api.taapi.io/sar?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
-    ));
-    const SARValue = await requestSAR.json()
-    global.tradeDataFromTwitty.sar = SARValue.value
-    const requestMACD = await limiter.schedule(() => fetch(
-        `https://api.taapi.io/macd?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
-    ));
-    const macdValue = await requestMACD.json();
-    global.tradeDataFromTwitty.MACDHistogram = macdValue.valueMACDHist
+    if (rsiValue.value >= 65){
+        global.tradeDataFromTwitty.oversold = true
+    }
+    global.tradeDataFromTwitty.humanTime = candles[candles.length - 1].timestampHuman
     console.log(a, 'inside candles function ', global.tradeDataFromTwitty)
     return candles
 }
 async function MACD(cryptoSymbol, interval){
     const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
     const symbol = cryptoSymbol + '/USDT'
-    const requestMACD = await limiter.schedule(() => fetch(
+    const requestMACD = await fetch(
         `https://api.taapi.io/macd?secret=${secret}&exchange=binance&symbol=${symbol}&interval=${interval}`,
-    ));
+    );
     const macdValue = await requestMACD.json();
     Object.entries(macdValue).forEach(([key, value]) => {
         if (key === 'valueMACDHist' && macdValue.valueMACDHist > 0){
@@ -146,6 +174,7 @@ async function readableTimestamp(timestamp){
 
 // Will display time in 10:30:23 format
     var formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+    global.tradeDataFromTwitty.time = formattedTime
 
     console.log(formattedTime, 'inside timestamp function');
 }
@@ -343,17 +372,7 @@ async function isSma5AboveNine(asset, interval){
     })
 
 }
-async function getAssetBalance(asset){
-    console.log('getting balance for asset', asset)
-    let assetToLowercase = asset.toLowerCase()
-    let assetInAvailableFormat = assetToLowercase + '_available'
-    const balance = await limiter.schedule(() =>bitstamp.balance().then(({body:data}) => data)).catch(err =>{console.log(err, 'in balance function')});
-    const assetBalance = balance[`${assetInAvailableFormat}`]
-   // console.log(asset, 'balance in balance', assetBalance)
-    let assetConvertedAmount = $.of(assetBalance).valueOf();
-    global.tradeDataFromTwitty.amount = assetConvertedAmount
-    return assetConvertedAmount
-}
+
 function assetBalancePromise(a){
     return new Promise((Resolve, Reject) =>{
         getAssetBalance(a).then(b =>{
@@ -446,7 +465,16 @@ async function cancelBitStampOrders(){
     let orders = await bitstamp.cancelOrdersAll();
     return orders
 }
-
+async function getAssetBalance(asset){
+    let assetToLowercase = asset.toLowerCase()
+    let assetInAvailableFormat = assetToLowercase + '_available'
+    const balance = await limiter.schedule(() =>bitstamp.balance().then(({body:data}) => data));
+    const assetBalance = balance[`${assetInAvailableFormat}`]
+   // console.log(asset, 'balance in balance', assetBalance)
+    let assetConvertedAmount = $.of(assetBalance).valueOf();
+    //global.tradeDataFromTwitty.amount = assetConvertedAmount
+    return assetConvertedAmount
+}
 setInterval(function(){
     //console.log('customers bot'. process.env.CLIENTNAME)
     cancelBitStampOrders().then(data =>{
@@ -456,33 +484,42 @@ setInterval(function(){
         console.log('buying power', data)
     })
     for(let a of crypto) {
-        const i = '5m'
+        const i = '1m'
         const symbol = a +'USD'
         const tickerSymbol = a + '_USD'
+        //todo move getting pricing to buyers and sellers create a price check function to see if purchase price has fallen 10% below current price
         const ticker = limiter.schedule(() => bitstamp.tickerHour(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) => {
             //console.log(a,'ticker information 1 hour interval from bitstamp', body)
             global.bitstampBuyData.buyPrice = parseFloat(body.bid)
             global.bitstampSellData.sellPrice = parseFloat(body.ask)
-            global.tradeDataFromTwitty.time = body.timestamp
             readableTimestamp(body.timestamp).then()
 
         })).catch(err =>{
             console.log(a,'error when getting ticker', err)
         })
-        getAssetBalance(a).then(b => {
-            console.log(a, 'new balance from promise', global.tradeDataFromTwitty.amount)
-        }).catch( err =>{
-          console.log(err, 'in getting balance')
+        getAssetBalance(a).then(b =>{
+            global.tradeDataFromTwitty.amount = b
+            console.log(a, 'asset balance on bitstamp ', b)
         })
         candles(a,i).then(data =>{
-            if (global.tradeDataFromTwitty.stochasticRsiKaboveD === true && global.buyingPower > 20 && global.tradeDataFromTwitty.undersold === true){
+
+            if (global.tradeDataFromTwitty.undersold === true && global.buyingPower > 20 && global.tradeDataFromTwitty.sarLessThanOpen === true && global.tradeDataFromTwitty.stochasticRsiKaboveD === true|| global.tradeDataFromTwitty.undersold === true && global.buyingPower > 20 && global.tradeDataFromTwitty.stochasticRsiKaboveD === true){
                 global.tradeDataFromTwitty.MACDHasCrossedSinceLastBuy = false
                 global.tradeDataFromTwitty.undersold = false
-                console.log(a,'about to buy based on stochastic rsi cross. are they crossed?',global.tradeDataFromTwitty.stochasticRsiKaboveD, ' setting macd has not crossed since buy to false ',global.tradeDataFromTwitty.MACDHasCrossedSinceLastBuy)
+                console.log(a,'about to buy based on undersold indicator ',global.tradeDataFromTwitty.undersold ,'followed by SAR less than open =', global.tradeDataFromTwitty.sarLessThanOpen, 'or stoch rsi K above D',global.tradeDataFromTwitty.stochasticRsiKaboveD)
                 return buyPromiseBitstamp(global.bitstampBuyData.buyPrice, global.tradeDataFromTwitty.symbol)
             }
-            if(global.tradeDataFromTwitty.MACDHistogram < 0 && global.tradeDataFromTwitty.amount > 20 && global.tradeDataFromTwitty.MACDHasCrossedSinceLastBuy === true){
-                return sellPromiseBitstamp(global.bitstampSellData.sellPrice, global.tradeDataFromTwitty.symbol)
+            if(global.tradeDataFromTwitty.sarLessThanOpen !== true){
+                getAssetBalance(a).then(b =>{
+                    if (b <= 0){
+                        console.log('dont own it return the sar was not true', global.tradeDataFromTwitty.sarLessThanOpen)
+                        return 'dont own it'
+                    } else {
+                        console.log('SELLING $$$ ', global.bitstampSellData.sellPrice, global.tradeDataFromTwitty.symbol)
+                        return sellPromiseBitstamp(global.bitstampSellData.sellPrice, global.tradeDataFromTwitty.symbol)
+                    }
+                })
+
             }
             })
 
@@ -537,6 +574,6 @@ setInterval(function(){
 
         })*/
     }
-}, 30000)
+}, 15000)
 
 app.listen(process.env.PORT);
