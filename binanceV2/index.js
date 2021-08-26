@@ -28,8 +28,8 @@ const binanceUS = new BinanceUS().options({
     verbose: true,
 });
 const limiter = new Bottleneck({
-    maxConcurrent: 10,
-    minTime: 500
+    maxConcurrent: 3,
+    minTime: 3000
 });
 global.bitstampSellData ={
     symbolInTrade:{},
@@ -45,7 +45,15 @@ global.bitstampBuyData = {
     engulfingBuy:{},
     smaHasCrossedSincePurchase: {}
 }
-global.tradeDataFromTwitty ={
+global.binanceData ={
+    symbol:{},
+    amount:{},
+    sellPrice: {},
+    buyPrice: {},
+    orderType: {},
+    buyingPower:{}
+}
+global.tradeData ={
     symbol:{},
     amount:{},
     open:{},
@@ -56,7 +64,7 @@ global.tradeDataFromTwitty ={
     engulfedValue:{},
     MACDHistogram:{},
     undersold:{},
-    RSI:{},
+    oversold:{},
     stochasticRsiKaboveD:{},
     MACDHasCrossedSinceLastBuy:{},
     UUID:{},
@@ -66,52 +74,63 @@ global.buyingPower={}
 const crypto = [
    'ETH','BTC'
 ]
+const binanceSymbols = [
+
+]
 let t = new Date
 const rawUtcTimeNow = (Math.floor(t.getTime()))
-async function candles(a, i){
-    const taapiSymbol = a + '/USDT'
-    console.log('inside  candles symbol', taapiSymbol)
-    const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
-    // const interval = '1h'
-    const requestCandles = await limiter.schedule(() => fetch(
-        `https://api.taapi.io/candles?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
-    ));
-    const candles = await requestCandles.json()
-    global.tradeDataFromTwitty.symbol = a
-    global.tradeDataFromTwitty.open = candles[candles.length - 1].open
-    global.tradeDataFromTwitty.close = candles[candles.length - 1].close
-    // console.log(a,'at interval' ,i , 'candles returned from taapi inside function ', candles[candles.length - 1]);
-    const requestStochRSI = await limiter.schedule(() => fetch(
-        `https://api.taapi.io/stochrsi?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}&kPeriod=3&dPeriod=3`,
-    ));
-    const stochRsiValue = await requestStochRSI.json()
-    global.tradeDataFromTwitty.stochValueK = stochRsiValue.valueFastK
-    global.tradeDataFromTwitty.stochValueD = stochRsiValue.valueFastD
-    global.tradeDataFromTwitty.stochasticRsiKaboveD = global.tradeDataFromTwitty.stochValueK > global.tradeDataFromTwitty.stochValueD
-    let smaData = await limiter.schedule(() =>sma(30, "close", "binance", taapiSymbol, i, false))
-    let lastSMANinecandle = smaData[smaData.length - 1]
-    global.tradeDataFromTwitty.sma9 = lastSMANinecandle
-    const requestRSI = await limiter.schedule(() => fetch(
-        `https://api.taapi.io/rsi?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
-    ));
-    const rsiValue = await requestRSI.json()
-    global.tradeDataFromTwitty.RSI = rsiValue.value
-    if (rsiValue.value < 45){
-        global.tradeDataFromTwitty.undersold = true
-    }
-    const requestSAR = await limiter.schedule(() => fetch(
-        `https://api.taapi.io/sar?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
-    ));
-    const SARValue = await requestSAR.json()
-    global.tradeDataFromTwitty.sar = SARValue.value
-    const requestMACD = await limiter.schedule(() => fetch(
-        `https://api.taapi.io/macd?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
-    ));
-    const macdValue = await requestMACD.json();
-    global.tradeDataFromTwitty.MACDHistogram = macdValue.valueMACDHist
-    console.log(a, 'inside candles function ', global.tradeDataFromTwitty)
-    return candles
+async function getBinanceBuyingPower(){
+    await binanceUS.balance((error, balances) => {
+        if (error) return console.error(error, 'in balance why?');
+        // console.info("balances()", balances);
+        console.info( " buying power on binance ", balances.USD.available);
+
+        global.binanceData.buyingPower = balances.USD.balances
+        let amount = +$$(
+            $(balances.USD.available),
+            subtractPercent(10)).toNumber().toFixed(2)
+        global.binanceData.buyingPower = amount
+        console.log( 'amount after subtract 10% and dropped decimal to 2 places line 74', amount, balances.USD.available)
+    });
 }
+async function getBinanceBalance(b){
+    await binanceUS.balance((error, balances) => {
+        if (error) return console.error(error, 'in balance why?',);
+        // console.info("balances()", balances);
+        console.info(b, " balance: ", balances[b].available);
+
+        global.binanceData.amount = balances[`${b}`]
+        let amount = +$$(
+            $(balances[b].available),
+            subtractPercent(10)).toNumber().toFixed(2)
+        console.log(b, 'amount after subtract 10% and dropped decimal to 2 places line 105', amount, balances[b].available)
+    });
+}
+async function getBinanceOrderBook(a){
+    const symbolBinance = a +'USD'
+    binanceUS.websockets.depthCache([`${symbolBinance}`], (symbol, depth) => {
+        let bids = binance.sortBids(depth.bids);
+        let asks = binance.sortAsks(depth.asks);
+        console.info("best bid: "+binance.first(bids));
+        console.info("best ask: "+binance.first(asks));
+      //  console.info("last updated: " + new Date(depth.eventTime));
+    });
+}
+async function sellOnBinance(price, currency){
+   await getBinanceBalance(currency).then(b =>{
+       const quantity = b
+       const binanceSymbol = currency + 'USD'
+       console.log('placed sell order on binance', binanceSymbol, quantity, price)
+         binanceUS.sell(binanceSymbol, quantity, price).then(resp =>{
+            console.log('placed sell order on binance', resp)
+        })
+    })
+
+}
+async function buyOnBinance(price, currency){
+    let amount = global.binanceData.buyingPower / price
+}
+
 async function MACD(cryptoSymbol, interval){
     const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
     const symbol = cryptoSymbol + '/USDT'
@@ -165,22 +184,6 @@ async function RSI(cryptoSymbol, interval){
      //console.log(cryptoSymbol,'returned rsi value in function', rsiValue)
     return rsiValue.value
 }
-function rsiPromise(a,i){
-    return new Promise((Resolve, Reject) =>{
-        RSI(a,i).then(rsi =>{
-            global.tradeDataFromTwitty.RSI = rsi
-            if (rsi < 43) {
-                global.tradeDataFromTwitty.undersold = true
-            }
-            if(rsi){
-                Resolve(rsi)
-            } else {
-                Reject('You Suck RSI')
-            }
-
-        })
-    })
-}
 async function parabolicSAR(cryptoSymbol, interval){
     const taapiSymbol = cryptoSymbol + '/USDT'
     //console.log('sar symbol', taapiSymbol)
@@ -199,14 +202,28 @@ async function parabolicSAR(cryptoSymbol, interval){
 
     return SARValue.value
 }
-const sma = require('trading-indicator').sma
+async function candles(a, i){
+    const taapiSymbol = a + '/USDT'
+    //console.log('rsi symbol', taapiSymbol)
+    const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
+    // const interval = '1h'
+    const requestCandles = await limiter.schedule(() => fetch(
+        `https://api.taapi.io/candles?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${i}`,
+    ));
+    const candles = await requestCandles.json()
+   // console.log(a,'at interval' ,i , 'candles returned from taapi inside function ', candles[candles.length - 1]);
 
-/*async function stochRSI(cryptoSymbol, interval){
+    return candles
+}
+async function stochRSI(cryptoSymbol, interval){
     const taapiSymbol = cryptoSymbol + '/USDT'
     //console.log('rsi symbol', taapiSymbol)
     const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
     // const interval = '1h'
-
+    const requestStochRSI = await limiter.schedule(() => fetch(
+        `https://api.taapi.io/stochrsi?secret=${secret}&exchange=binance&symbol=${taapiSymbol}&interval=${interval}&kPeriod=3&dPeriod=3`,
+    ));
+    const stochRsiValue = await requestStochRSI.json()
     Object.entries(stochRsiValue).forEach(([key, value]) => {
         //  console.log('crypto symbol:', cryptoSymbol, 'RSI = ', value.value)
 
@@ -214,7 +231,7 @@ const sma = require('trading-indicator').sma
     })
     //console.log(taapiSymbol,'returned Stochastic RSI k value =', stochRsiValue.valueFastK, 'd period value =', stochRsiValue.valueFastD)
     return stochRsiValue
-}*/
+}
 async function engulfedCandle(cryptoSymbol, interval){
     const symbol = cryptoSymbol + '/USDT'
     const secret = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImJyYW5kb24udHdpdHR5QGNvZGVzdGxvdWlzLmNvbSIsImlhdCI6MTYyNzgzNTAxNCwiZXhwIjo3OTM1MDM1MDE0fQ.xIHv_5dom5WBNjoIHDvKkitZl7P7tErl0boQO-Vl1_g'
@@ -234,7 +251,7 @@ async function engulfedCandle(cryptoSymbol, interval){
     })*/
     return engulfedValue.value
 }
-
+const sma = require('trading-indicator').sma
 async function getSMANine(s, i){
     // console.log(s, 'in sma9')
     let usableSymbol = s + '/USDT'
@@ -249,7 +266,6 @@ async function getSMANine(s, i){
 function stochRSIPromise(a,i){
     return new Promise((Resolve, Reject)=>{
         stochRSI(a,i).then(data=>{
-
             if(data){
                 Resolve(data)
             } else{
@@ -273,7 +289,6 @@ function candlesPromise(a,i){
 function MACDPromise(a,i){
     return new Promise((Resolve, Reject) =>{
         MACD(a,i).then( macd =>{
-
             if(macd){
                 Resolve(macd)
             } else{
@@ -297,7 +312,7 @@ function SARPromise(a,i){
 function sma9Promise(asset, i){
     return new Promise((resolve, reject)=>{
         getSMANine(asset, i).then(data =>{
-
+            //console.log(data)
             if(data){
                 resolve(data)
             }else{
@@ -335,7 +350,7 @@ async function isSma5AboveNine(asset, interval){
                  $(sma5), subtractPercent(1))*/
             let smaFiveIsAboveNine = sma5 >= smaNine // buy a certain percentage
             console.log(asset, 'Sma five is greater than 9?', smaFiveIsAboveNine,'sma9=', smaNine, 'sma5=', sma5)
-            global.tradeDataFromTwitty.fiveAboveTheNine = smaFiveIsAboveNine
+            global.tradeData.fiveAboveTheNine = smaFiveIsAboveNine
             global.bitstampBuyData.smaHasCrossedSincePurchase = smaFiveIsAboveNine
             return smaFiveIsAboveNine
         })
@@ -351,7 +366,6 @@ async function getAssetBalance(asset){
     const assetBalance = balance[`${assetInAvailableFormat}`]
    // console.log(asset, 'balance in balance', assetBalance)
     let assetConvertedAmount = $.of(assetBalance).valueOf();
-    global.tradeDataFromTwitty.amount = assetConvertedAmount
     return assetConvertedAmount
 }
 function assetBalancePromise(a){
@@ -455,38 +469,97 @@ setInterval(function(){
     getBuyingPower().then(data =>{
         console.log('buying power', data)
     })
+
     for(let a of crypto) {
-        const i = '5m'
+        /**
+         * set interval
+         * @type {string}
+         */
+       // console.log('symbol in loop', a)
+        const i = '1m'
         const symbol = a +'USD'
         const tickerSymbol = a + '_USD'
-        const ticker = limiter.schedule(() => bitstamp.tickerHour(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) => {
+       /* const ticker = limiter.schedule(() => bitstamp.tickerHour(CURRENCY[`${tickerSymbol}`]).then(({status, headers, body}) => {
             //console.log(a,'ticker information 1 hour interval from bitstamp', body)
+            /!*global.bitstampData.close = body.last
+            global.bitstampData.open = body.open*!/
             global.bitstampBuyData.buyPrice = parseFloat(body.bid)
             global.bitstampSellData.sellPrice = parseFloat(body.ask)
-            global.tradeDataFromTwitty.time = body.timestamp
+            global.bitstampData.time = body.timestamp
             readableTimestamp(body.timestamp).then()
 
         })).catch(err =>{
             console.log(a,'error when getting ticker', err)
-        })
+        })*/
         getAssetBalance(a).then(b => {
-            console.log(a, 'new balance from promise', global.tradeDataFromTwitty.amount)
+            global.tradeData.amount = b
+            console.log(a, 'new balance from promise', global.tradeData.amount)
+
         }).catch( err =>{
           console.log(err, 'in getting balance')
         })
         candles(a,i).then(data =>{
-            if (global.tradeDataFromTwitty.stochasticRsiKaboveD === true && global.buyingPower > 20 && global.tradeDataFromTwitty.undersold === true){
-                global.tradeDataFromTwitty.MACDHasCrossedSinceLastBuy = false
-                global.tradeDataFromTwitty.undersold = false
-                console.log(a,'about to buy based on stochastic rsi cross. are they crossed?',global.tradeDataFromTwitty.stochasticRsiKaboveD, ' setting macd has not crossed since buy to false ',global.tradeDataFromTwitty.MACDHasCrossedSinceLastBuy)
-                return buyPromiseBitstamp(global.bitstampBuyData.buyPrice, global.tradeDataFromTwitty.symbol)
-            }
-            if(global.tradeDataFromTwitty.MACDHistogram < 0 && global.tradeDataFromTwitty.amount > 20 && global.tradeDataFromTwitty.MACDHasCrossedSinceLastBuy === true){
-                return sellPromiseBitstamp(global.bitstampSellData.sellPrice, global.tradeDataFromTwitty.symbol)
-            }
-            })
-
+            global.tradeData.symbol = a
+            global.tradeData.open = data[data.length - 1].open
+            global.tradeData.close = data[data.length - 1].close
           //  console.log(a, 'candles in interval calling promise', data[data.length -1])
+        }).then(z =>{
+           return MACD(a, i).then(macd =>{
+                 global.tradeData.MACDHistogram = macd
+                 global.tradeData.MACDHasCrossedSinceLastBuy = macd >= 0
+                 console.log(a, 'setting MACD signal has crossed since buy', macd, global.tradeData.MACDHasCrossedSinceLastBuy)
+                 /*if(macd >= 0 && global.buyingPower > 20){
+                       return buyPromiseBitstamp(global.bitstampBuyData.buyPrice, a)
+                      }
+                       let sell = macd <= 0
+                      //  console.log(a, '$elling on MACD signal', macd, sell, 'amount', global.bitstampData.amount)
+                       if (macd <= 0 && global.bitstampData.amount > 0){
+                           // return sellPromiseBitstamp(global.bitstampBuyData.buyPrice, a)
+                         }*/
+             })
+         }).then(b =>{
+            return getSMANine(a,i).then(sma =>{
+                 console.log(a, 'the close',global.tradeData.close, 'the sma', sma)
+                 global.tradeData.sma9 = sma
+                 if (global.tradeData.close < global.tradeData.sma9 && global.tradeData.amount > 0 && global.tradeData.MACDHasCrossedSinceLastBuy === true){
+                     return sellPromiseBitstamp(global.bitstampSellData.sellPrice, global.tradeData.symbol)
+                 }
+
+             })
+         }).then(r =>{
+             return RSI(a,i).then(rsi => {
+                 if (rsi < 43) {
+                     global.tradeData.undersold = true
+                 }
+             })
+         }).then(o =>{
+            return stochRSI(a,i).then(data =>{
+                 global.tradeData.stochValueK = data.valueFastK
+                 global.tradeData.stochValueD = data.valueFastD
+                 // console.log(a, 'return from stoch rsi call fast k =', global.bitstampData.stochValueK, 'value fast D', global.bitstampData.stochValueD)
+                 global.tradeData.stochasticRsiKaboveD = global.tradeData.stochValueK > global.tradeData.stochValueD
+                 if (global.tradeData.stochasticRsiKaboveD === true && global.buyingPower > 20 && global.tradeData.undersold === true){
+                     global.tradeData.MACDHasCrossedSinceLastBuy = false
+                     global.tradeData.undersold = false
+                     console.log(a,'about to buy based on stochastic rsi cross. are they crossed?',global.tradeData.stochasticRsiKaboveD, ' setting macd has not crossed since buy to false ',global.tradeData.MACDHasCrossedSinceLastBuy)
+                     return buyPromiseBitstamp(global.bitstampBuyData.buyPrice, global.tradeData.symbol)
+                 }
+                 if(global.tradeData.MACDHistogram < 0 && global.tradeData.amount > 20 && global.tradeData.MACDHasCrossedSinceLastBuy === true){
+                    return sellPromiseBitstamp(global.bitstampSellData.sellPrice, global.tradeData.symbol)
+                 }
+             })
+         }).then(e =>{
+            return parabolicSAR(a, i).then(sar =>{
+                 global.tradeData.sar = sar
+                 // console.log('Parabolic SAR value', sar)
+             })
+         }).then(c =>{
+             console.log('end of interval what was scanned', global.tradeData)
+         })
+
+
+
+
 
         // Periods: 1m,3m,5m,15m,30m,1h,2h,4h,6h,8h,12h,1d,3d,1w,1M
         /**
